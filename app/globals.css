@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+
+  h1 { font-size: 1.875rem; font-weight: 700; letter-spacing: -0.025em; }
+  h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; }
+  h3 { font-size: 1.125rem; font-weight: 600; }
+}
+
+@layer components {
+  .btn-primary {
+    background-color: #0d9488;
+    color: white;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.15s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-primary:hover { background-color: #0f766e; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background-color: white;
+    color: #374151;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    transition: background-color 0.15s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-secondary:hover { background-color: #f8fafc; }
+
+  .btn-danger {
+    background-color: #ef4444;
+    color: white;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.15s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-danger:hover { background-color: #dc2626; }
+
+  .card {
+    background-color: white;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+
+  .input {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.15s;
+  }
+  .input:focus {
+    border-color: transparent;
+    box-shadow: 0 0 0 2px #0d9488;
+  }
+
+  .label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.25rem;
+  }
+
+  .badge-green {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #f0fdfa;
+    color: #0f766e;
+  }
+
+  .badge-blue {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .badge-orange {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #fff7ed;
+    color: #c2410c;
+  }
+
+  .badge-red {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #fef2f2;
+    color: #b91c1c;
+  }
+}
