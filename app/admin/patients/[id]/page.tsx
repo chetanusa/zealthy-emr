@@ -22,7 +22,6 @@ export default function PatientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -64,7 +63,6 @@ export default function PatientDetailPage() {
     const { name, value } = e.target;
 
     if (name === 'phone') {
-      // Format phone as US number +1 (XXX) XXX-XXXX
       const digits = value.replace(/\D/g, '').slice(0, 11);
       let formatted = '';
       if (digits.length === 0) {
@@ -111,7 +109,7 @@ export default function PatientDetailPage() {
     setError('');
     setSuccess('');
 
-    // Validate DOB — only future dates blocked, today is allowed
+    // Validate DOB
     if (form.dob) {
       const dob = formatDateForDb(form.dob);
       if (!dob) {
@@ -166,18 +164,6 @@ export default function PatientDetailPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm(`Are you sure you want to delete ${patient?.name}? This cannot be undone.`)) return;
-    setDeleting(true);
-    try {
-      await fetch(`/api/patients/${id}`, { method: 'DELETE' });
-      router.push('/admin');
-    } catch {
-      console.error('Delete failed');
-      setDeleting(false);
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -204,21 +190,12 @@ export default function PatientDetailPage() {
             Patient ID #{patient.id} · Joined {format(new Date(patient.created_at), 'MMMM d, yyyy')}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="btn-danger"
-          >
-            {deleting ? 'Deleting...' : 'Delete Patient'}
-          </button>
-          <button
-            onClick={() => { setEditing(!editing); setError(''); setSuccess(''); }}
-            className={editing ? 'btn-secondary' : 'btn-primary'}
-          >
-            {editing ? 'Cancel Edit' : 'Edit Patient'}
-          </button>
-        </div>
+        <button
+          onClick={() => { setEditing(!editing); setError(''); setSuccess(''); }}
+          className={editing ? 'btn-secondary' : 'btn-primary'}
+        >
+          {editing ? 'Cancel Edit' : 'Edit Patient'}
+        </button>
       </div>
 
       {/* Success */}
