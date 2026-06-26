@@ -39,6 +39,8 @@ export default function AdminAppointmentsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+  const [conflictMessage, setConflictMessage] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -58,6 +60,16 @@ export default function AdminAppointmentsPage() {
     }
   }
 
+  function hasTimeConflict(appt: Appointment): boolean {
+    return appointments.some(other => {
+      if (other.id === appt.id) return false;
+      const diffMinutes = Math.abs(
+        new Date(appt.datetime).getTime() - new Date(other.datetime).getTime()
+      ) / (1000 * 60);
+      return diffMinutes < 30;
+    });
+  }
+
   function openCreate() {
     setEditingAppt(null);
     setForm(emptyForm);
@@ -68,14 +80,12 @@ export default function AdminAppointmentsPage() {
 
   function openEdit(appt: Appointment) {
     setEditingAppt(appt);
-
     const dt = new Date(appt.datetime);
     const datePart = format(dt, 'yyyy-MM-dd');
     const h24 = dt.getHours();
     const mins = dt.getMinutes();
     const ampm = h24 >= 12 ? 'PM' : 'AM';
     const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
-
     setForm({
       provider: appt.provider,
       date: datePart,
@@ -119,6 +129,70 @@ export default function AdminAppointmentsPage() {
     return `${form.date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
   }
 
+  function checkConflict(): { type: 'duplicate' | 'time'; appt: Appointment } | null {
+    const newDatetime = new Date(buildDatetime());
+
+    // Check for exact duplicate — same provider + same date + same time
+    const duplicate = appointments.find(appt => {
+      if (editingAppt && appt.id === editingAppt.id) return false;
+      const existingDatetime = new Date(appt.datetime);
+      const sameProvider = appt.provider.toLowerCase().trim() === form.provider.toLowerCase().trim();
+      const diffMinutes = Math.abs(newDatetime.getTime() - existingDatetime.getTime()) / (1000 * 60);
+      const sameTime = diffMinutes < 1;
+      return sameProvider && sameTime;
+    });
+
+    if (duplicate) {
+      return { type: 'duplicate', appt: duplicate };
+    }
+
+    // Check for time conflict — same time different provider
+    const timeConflict = appointments.find(appt => {
+      if (editingAppt && appt.id === editingAppt.id) return false;
+      const existingDatetime = new Date(appt.datetime);
+      const diffMinutes = Math.abs(newDatetime.getTime() - existingDatetime.getTime()) / (1000 * 60);
+      return diffMinutes < 30;
+    });
+
+    if (timeConflict) {
+      return { type: 'time', appt: timeConflict };
+    }
+
+    return null;
+  }
+
+  async function saveAppointment() {
+    setSaving(true);
+    try {
+      const datetime = buildDatetime();
+      const url = editingAppt
+        ? `/api/patients/${id}/appointments/${editingAppt.id}`
+        : `/api/patients/${id}/appointments`;
+
+      const res = await fetch(url, {
+        method: editingAppt ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: form.provider,
+          datetime,
+          repeat: form.repeat,
+          end_date: endDateEnabled && form.end_date ? form.end_date : null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Failed to save'); return; }
+
+      await fetchData();
+      setShowModal(false);
+      setShowConflictWarning(false);
+    } catch {
+      setError('Something went wrong.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -141,36 +215,22 @@ export default function AdminAppointmentsPage() {
       return;
     }
 
-    setSaving(true);
-
-    try {
-      const datetime = buildDatetime();
-
-      const url = editingAppt
-        ? `/api/patients/${id}/appointments/${editingAppt.id}`
-        : `/api/patients/${id}/appointments`;
-
-      const res = await fetch(url, {
-        method: editingAppt ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: form.provider,
-          datetime,
-          repeat: form.repeat,
-          end_date: endDateEnabled && form.end_date ? form.end_date : null,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Failed to save'); return; }
-
-      await fetchData();
-      setShowModal(false);
-    } catch {
-      setError('Something went wrong.');
-    } finally {
-      setSaving(false);
+    const conflict = checkConflict();
+    if (conflict) {
+      if (conflict.type === 'duplicate') {
+        setError(`You Already Booked This Time Slot With  ${conflict.appt.provider}. Please choose a different time.`);
+        return;
+      }
+      if (conflict.type === 'time') {
+        setConflictMessage(
+          `${patientName} already has an appointment with ${conflict.appt.provider} on ${format(new Date(conflict.appt.datetime), 'MMM d, yyyy')} at ${format(new Date(conflict.appt.datetime), 'h:mm a')}. Do you still want to proceed?`
+        );
+        setShowConflictWarning(true);
+        return;
+      }
     }
+
+    await saveAppointment();
   }
 
   async function handleDelete(apptId: number) {
@@ -239,8 +299,23 @@ export default function AdminAppointmentsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {appointments.map(appt => (
-                <tr key={appt.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-800">{appt.provider}</td>
+                <tr
+                  key={appt.id}
+                  className={`hover:bg-slate-50 transition-colors ${hasTimeConflict(appt) ? 'bg-orange-50' : ''}`}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-slate-800">{appt.provider}</span>
+                      {hasTimeConflict(appt) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          Time Conflict
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-slate-600">
                     {format(new Date(appt.datetime), 'MMM d, yyyy · h:mm a')}
                   </td>
@@ -277,7 +352,41 @@ export default function AdminAppointmentsPage() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Conflict Warning Modal */}
+      {showConflictWarning && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 text-lg mb-2">Scheduling Conflict</h3>
+                <p className="text-slate-600 text-sm">{conflictMessage}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={saveAppointment}
+                disabled={saving}
+                className="btn-primary flex-1"
+              >
+                {saving ? 'Saving...' : 'Yes, Proceed'}
+              </button>
+              <button
+                onClick={() => setShowConflictWarning(false)}
+                className="btn-secondary flex-1"
+              >
+                No, Change Time
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
@@ -308,7 +417,7 @@ export default function AdminAppointmentsPage() {
                 />
               </div>
 
-              {/* Date — only future dates allowed */}
+              {/* Date */}
               <div>
                 <label className="label">Date <span className="text-red-500">*</span></label>
                 <input
@@ -320,12 +429,10 @@ export default function AdminAppointmentsPage() {
                   onChange={handleChange}
                   required
                 />
-                <p className="text-xs text-slate-400 mt-1">
-                  Only today or future dates allowed
-                </p>
+                <p className="text-xs text-slate-400 mt-1">Only today or future dates allowed</p>
               </div>
 
-              {/* Time — manual hour/minute + AM/PM dropdown */}
+              {/* Time */}
               <div>
                 <label className="label">Time <span className="text-red-500">*</span></label>
                 <div className="flex items-center gap-2">
