@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
+import { format, addDays, addWeeks, addMonths } from 'date-fns';
 
 interface Prescription {
   id: number;
@@ -91,7 +91,6 @@ export default function AdminPrescriptionsPage() {
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
 
-    // Auto update refill date when schedule changes
     if (name === 'refill_schedule') {
       const autoDate = getAutoRefillDate(value);
       setForm(prev => ({
@@ -111,6 +110,30 @@ export default function AdminPrescriptionsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    // Validate refill date is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const refillDate = new Date(form.refill_on + 'T00:00:00');
+    if (refillDate < today) {
+      setError('First refill date cannot be in the past. Please select today or a future date.');
+      return;
+    }
+
+    // Check for duplicate medication + dosage
+    const duplicate = prescriptions.find(rx => {
+      if (editingRx && rx.id === editingRx.id) return false;
+      return (
+        rx.medication.toLowerCase() === form.medication.toLowerCase() &&
+        rx.dosage.toLowerCase() === form.dosage.toLowerCase()
+      );
+    });
+
+    if (duplicate) {
+      setError(`${form.medication} ${form.dosage} is already prescribed for ${patientName}. Duplicate prescriptions are not allowed.`);
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -224,7 +247,10 @@ export default function AdminPrescriptionsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => openEdit(rx)} className="btn-secondary text-xs px-3 py-1.5">
+                      <button
+                        onClick={() => openEdit(rx)}
+                        className="btn-secondary text-xs px-3 py-1.5"
+                      >
                         Edit
                       </button>
                       <button
@@ -328,9 +354,11 @@ export default function AdminPrescriptionsPage() {
                   name="refill_on"
                   className="input"
                   value={form.refill_on}
+                  min={format(new Date(), 'yyyy-MM-dd')}
                   onChange={handleChange}
                   required
                 />
+                <p className="text-xs text-slate-400 mt-1">Must be today or a future date</p>
               </div>
 
               {error && (
@@ -343,7 +371,11 @@ export default function AdminPrescriptionsPage() {
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>
                   {saving ? 'Saving...' : editingRx ? 'Save Changes' : 'Add Prescription'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowModal(false)}
+                >
                   Cancel
                 </button>
               </div>

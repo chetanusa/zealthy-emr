@@ -96,18 +96,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="text-xs text-slate-400 text-center mb-3">Sample credentials</p>
-            <div className="space-y-2">
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-600">
-                <span className="font-medium">mark@some-email-provider.net</span> / Password123!
-              </div>
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-600">
-                <span className="font-medium">lisa@some-email-provider.net</span> / Password123!
-              </div>
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-sm text-slate-400 mt-6">
