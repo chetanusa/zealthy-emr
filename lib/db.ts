@@ -1,8 +1,8 @@
 import { createClient } from '@libsql/client';
-import path from 'path';
 
 const db = createClient({
-  url: `file:${path.join(process.cwd(), 'data', 'zealthy.db')}`,
+  url: process.env.TURSO_DATABASE_URL || `file:./data/zealthy.db`,
+  authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
 export async function initDb() {
@@ -73,15 +73,15 @@ async function seedIfEmpty() {
   // Mark Johnson
   const mark = await db.execute({
     sql: 'INSERT INTO users (name, email, password, dob, phone, address) VALUES (?, ?, ?, ?, ?, ?)',
-    args: ['Mark Johnson', 'mark@some-email-provider.net', 'Password123!', '1985-03-12', '555-0101', '123 Elm St, Portland OR'],
+    args: ['Mark Johnson', 'mark@some-email-provider.net', 'Password123!', '1985-03-12', '+1 (555) 010-1000', '123 Elm St, Portland OR'],
   });
   await db.execute({
     sql: 'INSERT INTO appointments (user_id, provider, datetime, repeat) VALUES (?, ?, ?, ?)',
-    args: [mark.lastInsertRowid, 'Dr Kim West', '2026-04-16T16:30:00.000-07:00', 'weekly'],
+    args: [mark.lastInsertRowid, 'Dr Kim West', '2026-04-16T16:30:00.000Z', 'weekly'],
   });
   await db.execute({
     sql: 'INSERT INTO appointments (user_id, provider, datetime, repeat) VALUES (?, ?, ?, ?)',
-    args: [mark.lastInsertRowid, 'Dr Lin James', '2026-04-19T18:30:00.000-07:00', 'monthly'],
+    args: [mark.lastInsertRowid, 'Dr Lin James', '2026-04-19T18:30:00.000Z', 'monthly'],
   });
   await db.execute({
     sql: 'INSERT INTO prescriptions (user_id, medication, dosage, quantity, refill_on, refill_schedule) VALUES (?, ?, ?, ?, ?, ?)',
@@ -95,15 +95,15 @@ async function seedIfEmpty() {
   // Lisa Smith
   const lisa = await db.execute({
     sql: 'INSERT INTO users (name, email, password, dob, phone, address) VALUES (?, ?, ?, ?, ?, ?)',
-    args: ['Lisa Smith', 'lisa@some-email-provider.net', 'Password123!', '1990-07-24', '555-0202', '456 Oak Ave, Seattle WA'],
+    args: ['Lisa Smith', 'lisa@some-email-provider.net', 'Password123!', '1990-07-24', '+1 (555) 020-2000', '456 Oak Ave, Seattle WA'],
   });
   await db.execute({
     sql: 'INSERT INTO appointments (user_id, provider, datetime, repeat) VALUES (?, ?, ?, ?)',
-    args: [lisa.lastInsertRowid, 'Dr Sally Field', '2026-04-22T18:15:00.000-07:00', 'monthly'],
+    args: [lisa.lastInsertRowid, 'Dr Sally Field', '2026-04-22T18:15:00.000Z', 'monthly'],
   });
   await db.execute({
     sql: 'INSERT INTO appointments (user_id, provider, datetime, repeat) VALUES (?, ?, ?, ?)',
-    args: [lisa.lastInsertRowid, 'Dr Lin James', '2026-04-25T20:00:00.000-07:00', 'weekly'],
+    args: [lisa.lastInsertRowid, 'Dr Lin James', '2026-04-25T20:00:00.000Z', 'weekly'],
   });
   await db.execute({
     sql: 'INSERT INTO prescriptions (user_id, medication, dosage, quantity, refill_on, refill_schedule) VALUES (?, ?, ?, ?, ?, ?)',
